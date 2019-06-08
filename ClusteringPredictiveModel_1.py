@@ -48,7 +48,7 @@ class ClusteringPredictiveModel:
         cluster_assignments = self.clustering.predict(self.data_freqs)
         
         # predict outcomes for each cluster
-        cols = [self.case_id_col]+list(self.clss[0].classes_)
+        cols = [self.case_id_col]+list(['A_Pending','A_Cancelled','A_Denied'])        #list(self.clss[0].classes_)
         preds = pd.DataFrame(columns=cols)
         self.actual = pd.DataFrame(columns=cols)
         for cl in range(self.n_clusters):

@@ -6,7 +6,7 @@ import pandas as pd
 
 class ClusteringPredictiveModel:
     
-    def __init__(self,cls_features, case_id_col, event_col, label_col, timestamp_col, cat_cols, numeric_cols, n_clusters, n_estimators, random_state=22, fillna=True, pos_label="A_Pending"):
+    def __init__(self, case_id_col, event_col, label_col, timestamp_col, cat_cols, numeric_cols, n_clusters, n_estimators, random_state=22, fillna=True, pos_label="A_Pending"):
         
         # columns
         self.case_id_col = case_id_col
@@ -20,7 +20,6 @@ class ClusteringPredictiveModel:
         self.clustering = KMeans(n_clusters, random_state=random_state)
         self.clss = [RandomForestClassifier(n_estimators=n_estimators, random_state=random_state) for _ in range(n_clusters)]
         self.data_freqs=0
-        self.cls_features=cls_features
     
     def fit(self, X, y=None):
         
@@ -34,13 +33,7 @@ class ClusteringPredictiveModel:
         for cl in range(self.n_clusters):
             cases = data_freqs[cluster_assignments == cl].index
             tmp = X[X[self.case_id_col].isin(cases)]
-            name='clusters/cluster_'+str(cl)+'.csv'
-            tmp.to_csv(name, sep=';')
             tmp = self.data_encoder.transform(tmp)
-            #missing columns:
-            missing_columns=[col for col in self.cls_features if col not in list(tmp.columns)]
-            mc=pd.DataFrame(columns=missing_columns)
-            tmp=pd.concat([tmp,mc],ignore_index=True,sort=False).fillna(0)
             self.clss[cl].fit(tmp.drop([self.case_id_col, self.label_col], axis=1), tmp[self.label_col])
         #print(tmp.drop([self.case_id_col, self.label_col], axis=1))
         return self
@@ -55,7 +48,7 @@ class ClusteringPredictiveModel:
         cluster_assignments = self.clustering.predict(self.data_freqs)
         
         # predict outcomes for each cluster
-        cols = [self.case_id_col]+list(self.clss[0].classes_)
+        cols = [self.case_id_col]+list(['A_Pending','A_Cancelled','A_Denied'])        #list(self.clss[0].classes_)
         preds = pd.DataFrame(columns=cols)
         self.actual = pd.DataFrame(columns=cols)
         for cl in range(self.n_clusters):
@@ -67,10 +60,7 @@ class ClusteringPredictiveModel:
                 
                 # encode data attributes
                 tmp = self.data_encoder.transform(tmp)
-                #missing columns:
-                missing_columns=[col for col in self.cls_features if col not in list(tmp.columns)]
-                mc=pd.DataFrame(columns=missing_columns)
-                tmp=pd.concat([tmp,mc],ignore_index=True,sort=False).fillna(0)
+                
                 # make predictions
                 new_preds = pd.DataFrame(self.clss[cl].predict_proba(tmp.drop([self.case_id_col, self.label_col], axis=1)))
                 new_preds.columns = self.clss[cl].classes_
